@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"google.golang.org/grpc"
+	"net"
 
 	proto "github.com/savarin/echo-go/proto"
 )
@@ -26,4 +29,22 @@ func (s *EchoServiceRpc) Echo(ctx context.Context, request *proto.EchoRequest) (
 		Message: message,
 	}
 	return response, nil
+}
+
+func main() {
+	lis, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		fmt.Printf("Failed to listen on port 8080: %v\n", err)
+		return
+	}
+	grpcServer := grpc.NewServer()
+
+	echoService := &EchoService{} // You'll need to define or import EchoService
+	rpcService := NewEchoServiceRpc(echoService)
+	proto.RegisterEchoServiceServer(grpcServer, rpcService)
+
+	fmt.Println("Server started, listening on 8080")
+	if err := grpcServer.Serve(lis); err != nil {
+		fmt.Printf("Failed to serve gRPC server: %v\n", err)
+	}
 }
