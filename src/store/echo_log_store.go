@@ -4,7 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/sqlite3"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -18,10 +22,14 @@ func (e *EchoLogStore) connect() *sql.DB {
 	return db
 }
 
-func (e *EchoLogStore) createTable() {
-	db := e.connect()
-	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS echo_log (id TEXT NOT NULL PRIMARY KEY, message TEXT NOT NULL, created_at TEXT NOT NULL);`)
+func (e *EchoLogStore) migrate() {
+	m, err := migrate.New(
+		"file://db/migrations",
+		"sqlite3://echo.db")
 	if err != nil {
+		log.Fatal(err)
+	}
+	if err := m.Up(); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -51,7 +59,11 @@ func (e *EchoLogStore) printLogs() {
 
 func main() {
 	store := &EchoLogStore{}
-	store.createTable()
-	store.insertLog("id1", "Hello, World!", "2023-08-18 10:30:00")
-	store.printLogs()
+
+	if len(os.Args) > 1 && os.Args[1] == "migrate" {
+		store.migrate()
+	} else {
+		store.insertLog("id1", "Hello, World!", "2023-08-18 10:30:00")
+		store.printLogs()
+	}
 }
